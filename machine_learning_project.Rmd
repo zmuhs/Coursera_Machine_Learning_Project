@@ -1,0 +1,128 @@
+---
+title: "Coursera_Regression_Project"
+author: "Zaid Muhsin"
+date: "December 13, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+##Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+Data
+
+The training data for this project are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+## Project Requirement
+
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+
+Your submission should consist of a link to a Github repo with your R markdown and compiled HTML file describing your analysis. Please constrain the text of the writeup to < 2000 words and the number of figures to be less than 5. It will make it easier for the graders if you submit a repo with a gh-pages branch so the HTML page can be viewed online (and you always want to make it easy on graders :-).
+You should also apply your machine learning algorithm to the 20 test cases available in the test data above. Please submit your predictions in appropriate format to the programming assignment for automated grading. See the programming assignment for additional details.
+
+
+## Analysis Steps
+
+1. Load the data and needed packages.
+2. Clean data (get rid of un necessary variables to the prediction models, those with mostly NA values and near zero variance).
+3. Apply random forest and Decision tree models to predict the classes.
+4. Choose the model with highest accuracy.
+5. Apply the model on the test data (20 observations) to answer the quiz.
+
+
+## Packages, Libraries and Seed
+
+
+```{r}
+library(caret)
+library(randomForest)
+library(rpart) 
+library(rpart.plot)
+library(rattle)
+library(randomForest)
+#setting seed
+set.seed(12345)
+
+```
+
+## Getting and cleaning data
+
+```{r}
+#Downloaded the training and test data sets from links belwod, and then load them into data frames.
+setwd("C://data_science/regression/project")
+training<-read.csv("pml-training.csv")
+testing<-read.csv("pml-testing.csv")
+
+# create a partition with the training dataset (70%training and 30 testing)
+inTrain  <- createDataPartition(training$classe, p=0.7, list=FALSE)
+TrainSet <- training[inTrain, ]
+TestSet  <- training[-inTrain, ]
+dim(TrainSet)
+dim(TestSet)
+
+```
+## Cleaning Data  
+In this step, we will clean the dataset and get rid of observations with missing values as well as some meaningless variables.
+
+
+``` {r}
+#removing those with near zero variance
+NZV <- nearZeroVar(TrainSet)
+TrainSet <- TrainSet[, -NZV]
+TestSet  <- TestSet[, -NZV]
+
+# remove variables that are mostly NA
+AllNA    <- sapply(TrainSet, function(x) mean(is.na(x))) > 0.95
+table(AllNA)
+TrainSet <- TrainSet[, AllNA==FALSE]
+TestSet  <- TestSet[, AllNA==FALSE]
+
+# remove identification only variables (columns 1 to 5)
+TrainSet <- TrainSet[, -(1:5)]
+TestSet  <- TestSet[, -(1:5)]
+dim(TrainSet)
+#Now we are eliminated un-neccessary variables, down from 160 to 54 variables
+
+```
+## Modelling
+
+## Method 01: Random forest
+
+```{r}
+modelRF <- randomForest(classe ~ .,   TrainSet, do.trace=F)
+predictRF <- predict(modelRF, TestSet)
+confusionMatrix(TestSet$classe, predictRF)
+```
+
+This method has a prediction accuracy of 99.5 %.
+
+## Method 02: Decision tree
+
+``` {r}
+modelTree <- rpart(classe ~ ., data = TrainSet, method = "class")
+prp(modelTree)
+
+#Now, we estimate the performance of the model on the TestSet data set. 
+predictTree <- predict(modelTree, TestSet, type = "class")
+confusionMatrix(TestSet$classe, predictTree)
+#As can be seen this model has accuracy of 74%, less than the accuracy of the random forest.
+
+```
+
+##Conclusion
+
+Random forest model is the most accurate model and will be applied on the final testing dataset to predict the classes for the (20 observations).
+
+```{r}
+predictRF <- predict(modelRF, testing)
+predictRF
+```
+
+
+
